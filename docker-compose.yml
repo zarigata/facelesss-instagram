@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  video_generator:
+    build: .
+    volumes:
+      - ./assets:/app/assets
+      - ./.env:/app/.env
+      - ./config.json:/app/config.json
+    command: python video_generator.py
+    environment:
+      - OLLAMA_HOST=192.168.15.115
+    extra_hosts:
+      - "host.docker.internal:192.168.15.115"
+    networks:
+      - ai_network
+
+  instagram_poster:
+    build: .
+    volumes:
+      - ./assets:/app/assets
+      - ./.env:/app/.env
+    command: python instagram_poster.py
+    depends_on:
+      - video_generator
+    networks:
+      - ai_network
+
+networks:
+  ai_network:
+    driver: bridge

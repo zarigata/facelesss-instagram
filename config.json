@@ -1,0 +1,18 @@
+{
+    "ollama": {
+        "host": "192.168.15.115",
+        "port": 11434,
+        "model": "llama3.2"
+    },
+    "video": {
+        "language": "en",
+        "generation_interval": "24h",
+        "prompt_template": "Create an engaging instagram reel video script {topic}, remember to only use words and sentences, use max 150 words, do not use hashtags or emojis"
+    },
+    "topics": [
+        "43 laws of power",
+        "self-improvement",
+        "success stories",
+        "life hacks"
+    ]
+}
