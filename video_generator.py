@@ -215,6 +215,71 @@ class VideoGenerator:
             
         return np.array(image)
     
+    def get_random_outro_image(self):
+        """Get a random image from the images directory"""
+        images_dir = self.assets_dir / "images"
+        images_dir.mkdir(exist_ok=True)
+        
+        image_extensions = {'.png', '.jpg', '.jpeg', '.webp'}
+        images = [
+            f for f in images_dir.glob('*')
+            if f.suffix.lower() in image_extensions
+        ]
+        
+        if not images:
+            raise Exception("No images found in assets/images directory")
+            
+        return random.choice(images)
+    
+    def create_outro(self, duration=4):
+        """Create an outro clip with a random image"""
+        try:
+            # Get random image
+            image_path = self.get_random_outro_image()
+            image = Image.open(str(image_path))
+            
+            # Resize image to match video dimensions (720x1280)
+            target_size = (720, 1280)
+            
+            # Calculate resize dimensions maintaining aspect ratio
+            aspect_ratio = image.width / image.height
+            target_ratio = target_size[0] / target_size[1]
+            
+            if aspect_ratio > target_ratio:
+                # Image is wider than target
+                new_height = target_size[1]
+                new_width = int(new_height * aspect_ratio)
+            else:
+                # Image is taller than target
+                new_width = target_size[0]
+                new_height = int(new_width / aspect_ratio)
+            
+            # Resize image
+            image = image.resize((new_width, new_height), Resampling.LANCZOS)
+            
+            # Create new image with black background
+            final_image = Image.new('RGB', target_size, 'black')
+            
+            # Paste resized image in center
+            paste_x = (target_size[0] - new_width) // 2
+            paste_y = (target_size[1] - new_height) // 2
+            final_image.paste(image, (paste_x, paste_y))
+            
+            # Convert to numpy array for MoviePy
+            image_array = np.array(final_image)
+            
+            # Create clip with fade in
+            outro_clip = (ImageClip(image_array)
+                         .set_duration(duration)
+                         .fadein(0.5)
+                         .fadeout(0.5))
+            
+            return outro_clip
+            
+        except Exception as e:
+            print(f"Error creating outro: {str(e)}")
+            raise
+    
     def generate_content(self, topic):
         # Connect to Ollama
         ollama_url = f"http://{self.config['ollama']['host']}:{self.config['ollama']['port']}/api/generate"
@@ -320,14 +385,20 @@ class VideoGenerator:
                 
                 current_time += duration
             
-            # Composite background and text
-            final_clip = CompositeVideoClip(
+            # Create outro clip
+            outro_clip = self.create_outro(4)  # 4 seconds outro
+            
+            # Composite main video
+            main_clip = CompositeVideoClip(
                 [background_clip] + text_clips,
                 size=(720, 1280)
-            )
+            ).set_audio(final_audio)
             
-            # Add audio
-            final_clip = final_clip.set_audio(final_audio)
+            # Concatenate main video with outro
+            final_clip = concatenate_videoclips([
+                main_clip,
+                outro_clip
+            ])
             
             # Write video file
             final_clip.write_videofile(
@@ -342,6 +413,7 @@ class VideoGenerator:
                 audio_clip.close()
             for clip in background_clips:
                 clip.close()
+            outro_clip.close()
             
             return output_file
             
