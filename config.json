@@ -2,17 +2,17 @@
     "ollama": {
         "host": "192.168.15.115",
         "port": 11434,
-        "model": "llama3.2"
+        "model": "wizard-vicuna-uncensored"
     },
     "video": {
         "language": "en",
-        "generation_interval": "24h",
-        "prompt_template": "Create an engaging instagram reel video script {topic}, remember to only use words and sentences, use max 150 words, do not use hashtags or emojis"
+        "generation_interval": "2h",
+        "prompt_template": "Create an engaging instagram reel video script with the topic of {topic}, remember to only use words and sentences, use max 150 words, do not use hashtags or emojis, the response should only contain the script and nothing else, in the end of the script add allways a sentence like, follow us for more content, or continue to lose it all "
     },
     "topics": [
-        "43 laws of power",
-        "self-improvement",
-        "success stories",
-        "life hacks"
+        "how to be rich with one of the 43 laws of power by robert greene",
+        "be the alpha male",
+        "how to be an alpha male in life",
+        "how to be the best arround you"
     ]
 }

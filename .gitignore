@@ -1,0 +1,41 @@
+# Environment variables
+.env
+
+# Media files
+*.mp3
+*.mp4
+*.wav
+*.m4a
+*.mov
+*.avi
+*.mkv
+
+# Generated content
+assets/
+!assets/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Docker
+.docker/

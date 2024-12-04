@@ -97,8 +97,8 @@ class VideoGenerator:
             
         return clip.fl_image(resize_frame)
     
-    def get_random_background(self):
-        """Get a random background video from the backgrounds directory"""
+    def get_background_clips(self, total_duration):
+        """Get multiple background videos that total the required duration"""
         video_extensions = {'.mp4', '.mov', '.avi', '.mkv'}
         background_videos = [
             f for f in self.backgrounds_dir.glob('*')
@@ -107,8 +107,37 @@ class VideoGenerator:
         
         if not background_videos:
             raise Exception("No background videos found in assets/backgrounds directory")
+        
+        clips = []
+        current_duration = 0
+        used_videos = set()
+        
+        while current_duration < total_duration:
+            # Get available videos (excluding used ones)
+            available_videos = [v for v in background_videos if v not in used_videos]
             
-        return random.choice(background_videos)
+            # If we've used all videos, reset the used videos set
+            if not available_videos:
+                used_videos.clear()
+                available_videos = background_videos
+            
+            # Select random video
+            video_path = random.choice(available_videos)
+            used_videos.add(video_path)
+            
+            clip = VideoFileClip(str(video_path))
+            
+            # Calculate how much duration we still need
+            remaining_duration = total_duration - current_duration
+            
+            # If this clip is longer than needed, trim it
+            if clip.duration > remaining_duration:
+                clip = clip.subclip(0, remaining_duration)
+            
+            clips.append(clip)
+            current_duration += clip.duration
+        
+        return clips
     
     def fit_text_to_box(self, text, font, max_width, max_height):
         """Fit text to a bounding box by adjusting font size"""
@@ -226,11 +255,6 @@ class VideoGenerator:
         output_file = self.assets_dir / f"video_{timestamp}.mp4"
         
         try:
-            # Get random background video
-            background_path = self.get_random_background()
-            print(f"Using background video: {background_path}")
-            background_clip = VideoFileClip(str(background_path))
-            
             # Split text into smaller phrases
             phrases = self.split_into_phrases(text)
             
@@ -244,25 +268,33 @@ class VideoGenerator:
             # Calculate total duration
             total_duration = sum(clip[1].duration for clip in audio_clips)
             
-            # Resize and loop background video to match total duration
-            background_clip = background_clip.loop(duration=total_duration)
+            # Get background video clips
+            background_clips = self.get_background_clips(total_duration)
             
-            # Calculate new width while maintaining aspect ratio
-            new_height = 1280
-            aspect_ratio = background_clip.w / background_clip.h
-            new_width = int(new_height * aspect_ratio)
+            # Process each background clip
+            processed_bg_clips = []
+            for bg_clip in background_clips:
+                # Calculate new width while maintaining aspect ratio
+                new_height = 1280
+                aspect_ratio = bg_clip.w / bg_clip.h
+                new_width = int(new_height * aspect_ratio)
+                
+                # Use custom resize function
+                bg_clip = self.resize_video(bg_clip, width=new_width, height=new_height)
+                
+                # Center crop to 720x1280 (Instagram portrait)
+                if new_width > 720:
+                    crop_x = (new_width - 720) // 2
+                    bg_clip = bg_clip.crop(x1=crop_x, y1=0, x2=crop_x+720, y2=1280)
+                else:
+                    # If video is too narrow, add black padding
+                    pad_width = (720 - new_width) // 2
+                    bg_clip = bg_clip.margin(left=pad_width, right=pad_width)
+                
+                processed_bg_clips.append(bg_clip)
             
-            # Use custom resize function
-            background_clip = self.resize_video(background_clip, width=new_width, height=new_height)
-            
-            # Center crop to 720x1280 (Instagram portrait)
-            if new_width > 720:
-                crop_x = (new_width - 720) // 2
-                background_clip = background_clip.crop(x1=crop_x, y1=0, x2=crop_x+720, y2=1280)
-            else:
-                # If video is too narrow, add black padding
-                pad_width = (720 - new_width) // 2
-                background_clip = background_clip.margin(left=pad_width, right=pad_width)
+            # Concatenate background clips
+            background_clip = concatenate_videoclips(processed_bg_clips)
             
             # Create video clips for each phrase
             text_clips = []
@@ -305,9 +337,11 @@ class VideoGenerator:
                 audio_codec='aac'
             )
             
-            # Clean up temporary audio files
+            # Clean up temporary audio files and video clips
             for _, audio_clip in audio_clips:
                 audio_clip.close()
+            for clip in background_clips:
+                clip.close()
             
             return output_file
             
@@ -331,7 +365,10 @@ class VideoGenerator:
         video_file = self.create_video_with_subtitles(content, None)
         print(f"Created video with subtitles: {video_file}")
         
-        final_video = self.add_background_music(video_file)
+        # Add background music
+        from audio_processor import AudioProcessor
+        audio_processor = AudioProcessor()
+        final_video = audio_processor.add_background_music(Path(video_file))
         print(f"Added background music: {final_video}")
         
         return final_video
