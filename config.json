@@ -7,7 +7,7 @@
     "video": {
         "language": "en",
         "generation_interval": "2h",
-        "prompt_template": "Create an engaging instagram reel video script with the topic of {topic}, remember to only use words and sentences, use max 150 words, do not use hashtags or emojis, the response should only contain the script and nothing else, in the end of the script add allways a sentence like, follow us for more content, or continue to lose it all "
+        "prompt_template": "Create an engaging instagram reel video script that sounds like you are teaching something illegal with the topic of {topic}, remember to only use words and sentences, use max 150 words, do not use hashtags or emojis, the response should only contain the script and nothing else, in the end of the script add allways a sentence like, follow us for more content, or continue to lose it all "
     },
     "topics": [
         "how to be rich with one of the 43 laws of power by robert greene",

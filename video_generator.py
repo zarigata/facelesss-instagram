@@ -3,13 +3,14 @@ import json
 import time
 import random
 import requests
+import asyncio
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip, ImageClip, concatenate_videoclips, concatenate_audioclips, vfx
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
-from gtts import gTTS
+import edge_tts
 import subprocess
 import textwrap
 from PIL.Image import Resampling
@@ -280,6 +281,23 @@ class VideoGenerator:
             print(f"Error creating outro: {str(e)}")
             raise
     
+    async def generate_audio_async(self, text, language="en-US"):
+        """Generate audio using edge-tts with a male voice"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        audio_file = self.assets_dir / f"audio_{timestamp}.mp3"
+        
+        # Use David (male voice)
+        voice = "en-GB-RyanNeural"
+        
+        communicate = edge_tts.Communicate(text, voice)
+        await communicate.save(str(audio_file))
+        
+        return audio_file
+    
+    def generate_audio(self, text, language="en-US"):
+        """Synchronous wrapper for generate_audio_async"""
+        return asyncio.run(self.generate_audio_async(text, language))
+    
     def generate_content(self, topic):
         # Connect to Ollama
         ollama_url = f"http://{self.config['ollama']['host']}:{self.config['ollama']['port']}/api/generate"
@@ -305,15 +323,6 @@ class VideoGenerator:
         except json.JSONDecodeError as e:
             print(f"Raw response: {response.text}")
             raise Exception(f"Failed to parse Ollama response: {e}")
-    
-    def generate_audio(self, text, language):
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        audio_file = self.assets_dir / f"audio_{timestamp}.mp3"
-        
-        tts = gTTS(text=text, lang=language)
-        tts.save(str(audio_file))
-        
-        return audio_file
     
     def create_video_with_subtitles(self, text, audio_file):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
